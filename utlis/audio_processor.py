@@ -1,4 +1,3 @@
-import yt_dlp
 from pydub import AudioSegment
 import os
 
@@ -6,6 +5,8 @@ DOWNLOAD_DIR = 'downloades'
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 def download_youtube_audio(url: str) -> str:
+    import yt_dlp
+
     output_path = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
     ydl_opts = {
         "format": "bestaudio/best",

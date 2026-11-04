@@ -1,0 +1,19 @@
+# Minimal runtime for the FastAPI web app on Render's free plan.
+# The full requirements.txt includes Whisper/PyTorch for local transcription.
+# Render uses Sarvam for speech-to-text and Mistral for embeddings/chat, so the
+# heavy ML stack is intentionally excluded here.
+fastapi==0.162.0
+uvicorn==0.52.1
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+markdown==3.11.2
+python-multipart==0.0.32
+python-dotenv==1.2.2
+requests==2.34.2
+pydub==0.25.1
+yt-dlp==2026.10.26
+chromadb==1.5.9
+onnxruntime==1.28.0
+langchain-chroma==1.1.0
+langchain-core==1.5.3
+mistralai==1.12.4

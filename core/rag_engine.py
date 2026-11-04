@@ -1,89 +1,39 @@
-import os
-from langchain_mistralai import ChatMistralAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-from core.vector_store import build_vector_store, load_vector_store, get_retriver
+from core.llm import chat
+from core.vector_store import build_vector_store, load_vector_store
 
-def get_llm():
-    return ChatMistralAI(
-        model=os.getenv("MISTRAL_MODEL", "ministral-8b-latest"),
-        mistral_api_key=os.getenv("MISTRAL_API_KEY"),
-        temperature=0.3,
-    )
+RAG_SYSTEM_PROMPT = """You are an expert meeting assistant. Answer the user's question
+based ONLY on the meeting transcript context provided below.
 
-def format_docs(docs):
-    return "\n\n".join([doc.page_content for doc in docs])
+If the answer is not found in the context, say:
+'I could not find this information in the meeting transcript.'
 
-def build_rag_chain(transcript: str, collection_name: str = None):
+Always be concise and practical. If quoting someone, mention it clearly.
+
+Context from meeting transcript:
+{context}"""
+
+
+class RagChat:
+    def __init__(self, vector_store, k: int = 4) -> None:
+        self.vector_store = vector_store
+        self.k = k
+
+    def invoke(self, question: str) -> str:
+        docs = self.vector_store.similarity_search(question, k=self.k)
+        context = "\n\n".join(doc.page_content for doc in docs)
+        return chat(RAG_SYSTEM_PROMPT.format(context=context), question)
+
+
+def build_rag_chain(transcript: str, collection_name: str = None) -> RagChat:
     vector_store = build_vector_store(transcript, collection_name=collection_name)
-    retriver = get_retriver(vector_store, k=4)
-    llm = get_llm()
-    prompt = ChatPromptTemplate.from_messages(
-        [(
-            "system",
-            """You are an expert meeting assistant. Answer the user's question
-            based ONLY on the meeting transcript context provided below.
-            
-            If the answer is not found in the context, say:
-            'I could not find this information in the meeting transcipt.' 
-            
-            Always be concise and practice. If quoting someone, mention it clearly.
-            
-            Context from meeting transcript:
-            {context}""",
-        ),
-        ("human", "{question}"),
-        ]
-    )
+    return RagChat(vector_store)
 
-    # Full LCEL RAG pipeline
 
-    rag_chain = (
-        {"context": retriver|RunnableLambda(format_docs),
-         "question": RunnablePassthrough()
-        }
-        | prompt | llm | StrOutputParser()
-    )
+def load_rag_chain(collection_name: str = None) -> RagChat:
+    return RagChat(load_vector_store(collection_name=collection_name))
 
-    return rag_chain
 
-def load_rag_chain(collection_name: str = None):
-    vector_store = load_vector_store(collection_name=collection_name)
-    retriver = get_retriver(vector_store)
-
-    llm = get_llm()
-    prompt = ChatPromptTemplate.from_messages(
-            [(
-                "system",
-                """You are an expert meeting assistant. Answer the user's question
-                based ONLY on the meeting transcript context provided below.
-                
-                If the answer is not found in the context, say:
-                'I could not find this information in the meeting transcipt.' 
-                
-                Always be concise and practice. If quoting someone, mention it clearly.
-                
-                Context from meeting transcript:
-                {context}""",
-            ),
-            ("human", "{question}"),
-            ]
-        )
-
-    rag_chain = (
-        {
-            "context": retriver| RunnableLambda(format_docs),
-            "question" : RunnablePassthrough(),
-        }
-        |prompt
-        |llm
-        |StrOutputParser()
-    )
-
-    return rag_chain
-
-def ask_question(rag_chain, question:str)-> str:
+def ask_question(rag_chain, question: str) -> str:
     print(f"Question: {question}")
     answer = rag_chain.invoke(question)
     print(f"answer: {answer}")

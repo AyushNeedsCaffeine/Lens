@@ -1,51 +1,35 @@
-#Actionableitems, decisions, questions
+from core.llm import chat
 
-from langchain_mistralai import ChatMistralAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-import os
 
-def get_llm():
-    return ChatMistralAI(
-        model=os.getenv("MISTRAL_MODEL", "ministral-8b-latest"),
-        mistral_api_key=os.getenv("MISTRAL_API_KEY"),
-        temperature=0.2,
+def _extract(transcript: str, system_prompt: str) -> str:
+    return chat(system_prompt, transcript, temperature=0.2)
+
+
+def extract_action_items(transcript: str) -> str:
+    return _extract(
+        transcript,
+        "You are an expert meeting analyst. From the meeting transcript, "
+        "extract all action items. For each provide: \n"
+        "- Task Description \n"
+        "- Owner (Who is responsible) \n"
+        "- Deadline (if mentioned, else write 'Not specified') \n\n"
+        "Format as a numbered list. If none found say 'No action items found.'",
     )
 
-def build_chain(system_prompt: str) -> str:
-    llm = get_llm()
-    return(
-        RunnablePassthrough() | RunnableLambda(lambda x : {"text":x})| ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            ("human", "{text}")
-        ])|llm|StrOutputParser()
+
+def extract_key_decisions(transcript: str) -> str:
+    return _extract(
+        transcript,
+        "You are an expert meeting analyst. From the meeting transcript, "
+        "extract all key decisions made. Format as a numbered list. "
+        "If none found say 'No key decision found.'",
     )
 
-def extract_action_items(transcript: str)-> str:
-    chain = build_chain(
-        "You are an expert meeting analyst. From the meeting transcript, " \
-        "extract all action items. For each provide: \n" \
-        "- Task Description \n" \
-        "- Owner (Who is responsible) \n" \
-        "- Deadline (if mentioned, else write 'Not specified') \n\n" \
-        "Format as a numbered list. If none found say 'No action items found."
-    )
 
-    return chain.invoke(transcript)
-
-def extract_key_decisions(transcript: str)-> str:
-    chain = build_chain(
-        "You are an expert meeting analyst. From the meeting transcript," \
-        "extract all key decisions made. Format as a numbered list."
-        "If none found say 'No key decision found.' "
+def extract_questions(transcript: str) -> str:
+    return _extract(
+        transcript,
+        "From the meeting transcript, extract all unresolved questions "
+        "or topics needing follow-up. Format as a numbered list. "
+        "If none found say 'No open questions found.'",
     )
-    return chain.invoke(transcript)
-
-def extract_questions(transcript: str)-> str:
-    chain = build_chain(
-        "From the meeting transcript, extract all unresolved questions" \
-        "or topics needing follow-up. Format as a numbered list." \
-        "If none found say 'No open questions found.'"
-    )
-    return chain.invoke(transcript)
