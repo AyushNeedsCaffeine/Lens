@@ -1,78 +1,50 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full scroll-smooth">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Lens{% endblock %}</title>
   <meta name="description" content="Lens turns recordings into transcripts, summaries, decisions, action items, and answers. Watch less. Understand more.">
-  <meta name="theme-color" content="#090D16">
+  <meta name="theme-color" content="#FBF1E3">
   <link rel="icon" type="image/png" href="/static/img/lens-mark.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            ink: "#F5EFE6",
-            "ink-soft": "#D8D2C9",
-            accent: "#FF7A1A",
-            "accent-soft": "#FFB073",
-            "accent-dark": "#E85F0C",
-            brown: "#C08A66",
-            "brown-light": "#D6A17B",
-            "brown-soft": "#2A1D18",
-            blue: "#7AA2FF",
-            paper: "#090D16",
-            sand: "#2A3652",
-            surface: "#131B2C",
-            "surface-2": "#19233A",
-            "surface-3": "#212D47",
-            muted: "#98A3B8",
-          },
-          fontFamily: {
-            sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
-          },
-        },
-      },
-    };
-  </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-  <script defer src="/static/js/motion.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
-  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/app.css?v=4">
   {% block head %}{% endblock %}
 </head>
-<body class="flex min-h-full flex-col bg-paper font-sans text-ink antialiased">
-  <header class="sticky top-0 z-30 border-b border-sand bg-paper">
-    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
-      <form action="/session/reset" method="post" onsubmit="return confirm('Start a new session? You will return to the home screen.');">
-        <button type="submit" class="brand-button group flex items-center gap-3 rounded-2xl p-1 pr-3 text-left" title="Start a new session">
-          <img src="/static/img/lens-mark.png" alt="" class="brand-mark h-11 w-11 rounded-xl object-contain">
-          <span class="hidden leading-tight sm:block">
-            <span class="block text-lg font-semibold tracking-tight text-ink">Lens</span>
-            <span class="block text-[11px] font-medium tracking-wide text-muted">Watch less. Understand more.</span>
-          </span>
+<body class="site-body">
+  <a class="skip-link mono" href="#main">SKIP TO CONTENT</a>
+
+  <header class="site-header">
+    <div class="nav-shell">
+      <form action="/session/reset" method="post" class="brand-form" onsubmit="return confirm('Start a new session? You will return to the home screen.');">
+        <button type="submit" class="brand" title="Start a new session" aria-label="Lens — start a new session">
+          <img src="/static/img/lens-mark.png" alt="" class="brand-mark">
+          <span class="brand-word">LENS</span>
         </button>
       </form>
-      <div class="flex items-center gap-2">
+
+      <div class="header-actions">
         {% block header_actions %}{% endblock %}
       </div>
     </div>
-    <div class="h-[2px] bg-accent"></div>
   </header>
 
-  <main class="flex-1">
+  <main id="main" class="site-main">
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="border-t border-sand/80">
-    <div class="mx-auto flex max-w-6xl flex-col gap-1 px-5 py-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
-      <p><span class="font-semibold text-brown">Lens</span> · Watch less. Understand more.</p>
-      <p>FastAPI · Mistral · Sarvam · Whisper</p>
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img src="/static/img/lens-mark.png" alt="" class="footer-mark">
+        <span class="mono">WATCH LESS. UNDERSTAND MORE.</span>
+      </div>
+      <a class="mono footer-link" href="https://github.com/AyushNeedsCaffeine/Lens" target="_blank" rel="noreferrer">GITHUB ↗</a>
+      <p class="mono footer-version">LENS · V2.0.3 · FASTAPI · MISTRAL · SARVAM · WHISPER</p>
     </div>
   </footer>
 

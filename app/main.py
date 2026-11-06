@@ -21,6 +21,13 @@ load_dotenv()
 from app.config import STATIC_DIR, TEMPLATES_DIR, UPLOAD_DIR
 from app.services.jobs import Job, store
 from app.services.pipeline import STAGES, run_job
+from app.services.rate_limit import (
+    QUOTA_MESSAGE,
+    chat_limiter,
+    client_key,
+    job_limiter,
+    rate_limits_enabled,
+)
 
 ALLOWED_EXTENSIONS = {
     ".mp4",
@@ -101,6 +108,25 @@ def _index_response(
     )
 
 
+def _quota_response(
+    request: Request,
+    *,
+    retry_after: int,
+    youtube_url: str = "",
+    language: str = "english",
+) -> HTMLResponse:
+    response = _index_response(
+        request,
+        error=QUOTA_MESSAGE,
+        youtube_url=youtube_url,
+        language=language,
+        status_code=429,
+    )
+    response.headers["Retry-After"] = str(retry_after)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 async def _save_upload(upload: UploadFile, destination: Path) -> int:
     size = 0
     try:
@@ -134,6 +160,7 @@ async def process(
     youtube_url = youtube_url.strip()
     language = language if language in LANGUAGE_NAMES else "english"
     upload = file if file is not None and file.filename else None
+    ip = client_key(request)
 
     if youtube_url and upload:
         return _index_response(
@@ -163,6 +190,15 @@ async def process(
                 language=language,
                 status_code=400,
             )
+        if rate_limits_enabled():
+            quota = job_limiter.consume(ip)
+            if not quota.allowed:
+                return _quota_response(
+                    request,
+                    retry_after=quota.retry_after,
+                    youtube_url=youtube_url,
+                    language=language,
+                )
         source = youtube_url
         source_label = youtube_url
     else:
@@ -177,6 +213,14 @@ async def process(
                 language=language,
                 status_code=400,
             )
+        if rate_limits_enabled():
+            quota = job_limiter.check(ip)
+            if not quota.allowed:
+                return _quota_response(
+                    request,
+                    retry_after=quota.retry_after,
+                    language=language,
+                )
         destination = UPLOAD_DIR / f"{job_id}{suffix}"
         try:
             size = await _save_upload(upload, destination)
@@ -195,6 +239,15 @@ async def process(
                 language=language,
                 status_code=400,
             )
+        if rate_limits_enabled():
+            quota = job_limiter.consume(ip)
+            if not quota.allowed:
+                destination.unlink(missing_ok=True)
+                return _quota_response(
+                    request,
+                    retry_after=quota.retry_after,
+                    language=language,
+                )
         source = str(destination)
         source_label = upload.filename
 
@@ -219,10 +272,11 @@ def job_page(request: Request, job_id: str) -> HTMLResponse:
     job = store.get(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
+    chat_error = QUOTA_MESSAGE if request.query_params.get("chat_limit") == "1" else None
     return templates.TemplateResponse(
         request,
         "job.html",
-        _base_context(request, job=job, stages=STAGES),
+        _base_context(request, job=job, stages=STAGES, chat_error=chat_error),
     )
 
 
@@ -271,14 +325,20 @@ def job_chat(request: Request, job_id: str, message: str = Form("")) -> Response
 
     is_htmx = request.headers.get("HX-Request") == "true"
 
-    def chat_response() -> Response:
+    def chat_response(chat_error: str | None = None, retry_after: int | None = None) -> Response:
         if is_htmx:
-            return templates.TemplateResponse(
+            response = templates.TemplateResponse(
                 request,
                 "partials/chat.html",
-                {"job": job},
+                {"job": job, "chat_error": chat_error},
             )
-        return RedirectResponse(f"/jobs/{job_id}#chat", status_code=303)
+        elif chat_error:
+            response = RedirectResponse(f"/jobs/{job_id}?chat_limit=1#chat", status_code=303)
+        else:
+            response = RedirectResponse(f"/jobs/{job_id}#chat", status_code=303)
+        if retry_after is not None:
+            response.headers["Retry-After"] = str(retry_after)
+        return response
 
     if job.status != "complete" or not job.result:
         return chat_response()
@@ -286,6 +346,11 @@ def job_chat(request: Request, job_id: str, message: str = Form("")) -> Response
     message = message.strip()[:2000]
     if not message:
         return chat_response()
+
+    if rate_limits_enabled():
+        quota = chat_limiter.consume(client_key(request))
+        if not quota.allowed:
+            return chat_response(QUOTA_MESSAGE, quota.retry_after)
 
     store.add_message(job_id, "user", message)
     try:

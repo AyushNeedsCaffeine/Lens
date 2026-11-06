@@ -18,6 +18,18 @@ services:
         value: saaras:v4
       - key: MISTRAL_MODEL
         value: ministral-8b-latest
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+      - key: TRUST_PROXY_HEADERS
+        value: "true"
+      - key: DAILY_JOB_LIMIT_PER_IP
+        value: "3"
+      - key: DAILY_JOB_LIMIT_GLOBAL
+        value: "25"
+      - key: DAILY_CHAT_LIMIT_PER_IP
+        value: "40"
+      - key: DAILY_CHAT_LIMIT_GLOBAL
+        value: "400"
       - key: MISTRAL_API_KEY
         sync: false
       - key: SARVAM_API_KEY

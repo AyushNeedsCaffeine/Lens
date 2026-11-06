@@ -1,27 +1,32 @@
-<div id="chat-panel" class="card p-6 sm:p-7">
-  <div class="flex flex-wrap items-center justify-between gap-3">
+<div id="chat-panel" class="chat-panel">
+  <div class="chat-head">
     <div>
-      <h2 class="section-title">Ask the recording</h2>
-      <p class="mt-1 text-xs text-muted">Answers are grounded in this transcript only.</p>
+      <p class="panel-kicker">Grounded answers</p>
+      <h2 class="chat-title">Ask the recording</h2>
+      <p class="chat-sub">Answers are grounded in this transcript only.</p>
     </div>
-    <a href="/jobs/{{ job.id }}/download/chat" class="btn-ghost">Download chat</a>
+    <a href="/jobs/{{ job.id }}/download/chat" class="btn btn-ghost btn-small">Download chat</a>
   </div>
 
-  <div id="chat-scroll" class="mt-6 max-h-[30rem] space-y-4 overflow-y-auto pr-1">
+  {% if chat_error %}
+  <div class="chat-quota" role="alert">{{ chat_error }}</div>
+  {% endif %}
+
+  <div id="chat-scroll" class="chat-scroll">
     {% if job.messages %}
       {% for message in job.messages %}
         {% if message.role == 'user' %}
-        <div class="chat-message ml-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent px-4 py-3 text-sm leading-6 text-[#1B0E05]">{{ message.content }}</div>
+        <div class="chat-message is-user">{{ message.content }}</div>
         {% else %}
-        <div class="chat-message w-fit max-w-[92%] rounded-2xl rounded-bl-md border border-sand bg-surface-2 px-4 py-3 text-sm leading-6">
+        <div class="chat-message is-assistant">
           <div class="prose-lens">{{ message.content|markdown }}</div>
         </div>
         {% endif %}
       {% endfor %}
     {% else %}
-      <div class="rounded-2xl border border-dashed border-sand bg-surface-2 px-5 py-8 text-center">
-        <p class="text-sm font-medium text-ink">Ask about decisions, owners, dates, or anything that was said.</p>
-        <p class="mt-1 text-xs text-muted">For example: “What did we agree about the launch date?”</p>
+      <div class="chat-empty">
+        <p class="chat-empty-title">Ask about decisions, owners, dates, or anything that was said.</p>
+        <p class="chat-empty-hint">For example: “What did we agree about the launch date?”</p>
       </div>
     {% endif %}
   </div>
@@ -29,18 +34,18 @@
   <form
     action="/jobs/{{ job.id }}/chat"
     method="post"
-    class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end"
+    class="chat-form"
     hx-post="/jobs/{{ job.id }}/chat"
     hx-target="#chat-panel"
     hx-swap="outerHTML"
     hx-disabled-elt="find button"
   >
-    <div class="flex-1">
+    <div class="chat-field">
       <label for="message" class="field-label">Your question</label>
-      <textarea id="message" name="message" rows="2" maxlength="2000" required autocomplete="off" placeholder="What were the main blockers?" class="field mt-2 resize-none"></textarea>
-      <p class="field-hint">Press <kbd class="rounded border border-sand bg-surface-2 px-1 py-0.5 text-[10px] font-semibold text-ink">Enter</kbd> to send · <kbd class="rounded border border-sand bg-surface-2 px-1 py-0.5 text-[10px] font-semibold text-ink">Shift</kbd> + <kbd class="rounded border border-sand bg-surface-2 px-1 py-0.5 text-[10px] font-semibold text-ink">Enter</kbd> for a new line.</p>
+      <textarea id="message" name="message" rows="2" maxlength="2000" required autocomplete="off" placeholder="What were the main blockers?" class="chat-input"></textarea>
+      <p class="field-hint">Press <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line.</p>
     </div>
-    <button type="submit" class="btn-primary h-[46px] sm:mb-[1.56rem]">
+    <button type="submit" class="btn chat-send">
       <span class="chat-spinner" aria-hidden="true"></span>
       <span>Send</span>
     </button>

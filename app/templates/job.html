@@ -3,15 +3,16 @@
 {% block title %}{% if job.result %}{{ job.result.title }}{% elif job.status == 'error' %}Error{% else %}Processing{% endif %} · Lens{% endblock %}
 
 {% block header_actions %}
-<a href="/" class="btn-ghost">New session</a>
+<a href="/" class="btn btn-ghost btn-small">New session</a>
 {% endblock %}
 
 {% block content %}
-<div id="job-top" class="mx-auto max-w-5xl scroll-mt-24 px-5 py-8 sm:py-10">
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between" data-reveal>
-    <div class="min-w-0">
-      <a href="/" class="inline-flex items-center gap-1 text-sm font-medium text-muted transition hover:text-brown">&larr; Back to start</a>
-      <h1 class="mt-2 text-3xl font-bold tracking-tight text-ink sm:text-4xl">
+<div id="job-top" class="job-main">
+  <header class="job-head">
+    <div class="job-head-copy">
+      <a href="/" class="back-link mono">&larr; Back to start</a>
+      <p class="kicker">Job / {{ job.id }}</p>
+      <h1 class="job-title">
         {% if job.result %}
           {{ job.result.title }}
         {% elif job.status == 'error' %}
@@ -20,90 +21,85 @@
           Processing your recording
         {% endif %}
       </h1>
-      <p class="mt-2 truncate text-sm text-muted" title="{{ job.source_label }}">
+      <p class="job-meta" title="{{ job.source_label }}">
         {{ job.source_label|truncate(90) }} · {{ language_names.get(job.language, job.language) }}
       </p>
     </div>
-    <div class="flex shrink-0 items-stretch gap-2">
+
+    <div class="job-head-actions">
       {% if job.status == 'complete' %}
-      <span class="pill pill-success">Ready</span>
-      <a href="/jobs/{{ job.id }}/download/minutes" class="btn-primary">Download minutes</a>
+      <span class="status-pill is-success">Ready</span>
+      <a href="/jobs/{{ job.id }}/download/minutes" class="btn">Download minutes</a>
       {% elif job.status == 'error' %}
-      <span class="pill pill-error">Failed</span>
+      <span class="status-pill is-error">Failed</span>
       {% else %}
-      <span class="pill pill-live"><span class="pill-dot"></span>Processing</span>
+      <span class="status-pill is-live"><span class="status-dot" aria-hidden="true"></span>Processing</span>
       {% endif %}
     </div>
-  </div>
+  </header>
 
   {% if job.status in ('queued', 'running') %}
   <section
     id="job-progress"
     data-job-id="{{ job.id }}"
     data-stage="{{ job.stage }}"
-    class="card mt-8 overflow-hidden p-6 sm:p-8"
-    data-reveal
+    class="progress-panel"
   >
-    <div class="grid gap-8 md:grid-cols-[10.5rem_1fr] md:items-center">
-      <div class="loader-stage" aria-hidden="true">
-        <div id="loader-ring" class="loader-orbit">
-          <span class="orbit-dot orbit-dot-a"></span>
-          <span class="orbit-dot orbit-dot-b"></span>
-          <span class="orbit-dot orbit-dot-c"></span>
-        </div>
-        <div class="loader-fox">
-          <img src="/static/img/lens-mark.png" alt="">
-        </div>
-        <div class="loader-glint"></div>
-      </div>
-
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-widest text-accent">Scanning the recording</p>
-        <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
-          <p id="job-message" class="text-lg font-semibold text-ink" aria-live="polite">{{ job.message }}</p>
-          <span id="job-percent" class="text-3xl font-bold tabular-nums tracking-tight text-ink">{{ job.progress }}%</span>
-        </div>
-        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ job.progress }}">
-          <div id="job-bar" class="progress-bar" style="width: {{ job.progress }}%"></div>
-        </div>
-        <p class="mt-4 text-xs leading-5 text-muted">
-          Lens is transcribing, understanding, and indexing the conversation. The page updates live.
-        </p>
+    <div class="progress-art" aria-hidden="true">
+      <div class="scan-frame">
+        <img src="/static/img/lens-mark.png" alt="">
+        <span class="scan-line"></span>
       </div>
     </div>
 
-    <ol class="mt-8 grid gap-2 border-t border-sand pt-6 sm:grid-cols-2">
-      {% for key, label in stages %}
-      <li data-stage="{{ key }}" class="stage">
-        <span class="stage-dot" aria-hidden="true"></span>
-        <span>{{ label }}</span>
-      </li>
-      {% endfor %}
-    </ol>
+    <div class="progress-copy">
+      <p class="progress-kicker">Scanning the recording</p>
+      <div class="progress-line">
+        <p id="job-message" class="progress-message" aria-live="polite">{{ job.message }}</p>
+        <span id="job-percent" class="progress-percent">{{ job.progress }}%</span>
+      </div>
 
-    <p class="mt-6 text-xs leading-5 text-muted">
-      Keep this page open. You can also return through the job link while the server is running.
-    </p>
+      <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ job.progress }}">
+        <div id="job-bar" class="progress-bar" style="width: {{ job.progress }}%"></div>
+      </div>
+
+      <p class="progress-note">
+        Lens is transcribing, understanding, and indexing the conversation. The page updates live.
+      </p>
+
+      <ol class="stage-list">
+        {% for key, label in stages %}
+        <li data-stage="{{ key }}" class="stage">
+          <span class="stage-index">{{ "%02d"|format(loop.index) }}</span>
+          <span class="stage-dot" aria-hidden="true"></span>
+          <span>{{ label }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+
+      <p class="progress-note">
+        Keep this page open. You can also return through the job link while the server is running.
+      </p>
+    </div>
   </section>
 
   {% elif job.status == 'error' %}
-  <section class="card mt-8 border-red-200 p-6 sm:p-8" data-reveal>
-    <div class="flex items-start gap-4">
-      <span class="alert-dot mt-1.5"></span>
-      <div class="min-w-0">
-        <h2 class="text-lg font-semibold text-ink">The recording could not be processed</h2>
-        <p class="mt-2 break-words text-sm leading-6 text-muted">{{ job.error or 'An unknown error occurred.' }}</p>
-        <div class="mt-5 flex flex-wrap gap-3">
-          <a href="/" class="btn-primary">Try another recording</a>
-          <a href="/jobs/{{ job.id }}" class="btn-ghost">Refresh status</a>
-        </div>
+  <section class="error-panel">
+    <span class="error-mark" aria-hidden="true"></span>
+    <div>
+      <p class="kicker">Processing failed</p>
+      <h2 class="error-title">The recording could not be processed</h2>
+      <p class="error-message">{{ job.error or 'An unknown error occurred.' }}</p>
+      <div class="error-actions">
+        <a href="/" class="btn">Try another recording</a>
+        <a href="/jobs/{{ job.id }}" class="btn btn-ghost">Refresh status</a>
       </div>
     </div>
   </section>
 
   {% elif job.result %}
   <div
-    class="mt-8"
+    class="results"
     x-data="{
       tab: (['summary', 'actions', 'decisions', 'questions', 'transcript', 'downloads'].includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : 'summary'),
       select(name) {
@@ -112,7 +108,6 @@
         history.replaceState(null, '', '#' + name);
       }
     }"
-    data-reveal
   >
     <div class="tab-bar" role="tablist" aria-label="Job views">
       <button type="button" class="tab-btn" role="tab" :aria-selected="tab === 'summary'" :class="tab === 'summary' ? 'is-active' : ''" @click="select('summary')">Summary</button>
@@ -123,162 +118,122 @@
       <button type="button" class="tab-btn" role="tab" :aria-selected="tab === 'downloads'" :class="tab === 'downloads' ? 'is-active' : ''" @click="select('downloads')">Downloads</button>
     </div>
 
-    <section
-      x-show="tab === 'summary'"
-      x-cloak
-      x-transition:enter="transition duration-300 ease-out"
-      x-transition:enter-start="opacity-0 translate-y-2"
-      x-transition:enter-end="opacity-100 translate-y-0"
-      data-tab-panel="summary"
-      class="mt-4"
-    >
-      <article class="card p-6 sm:p-8">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <h2 class="section-title">Summary</h2>
-          <span class="pill pill-brown">At a glance</span>
-        </div>
-        <div class="prose-lens mt-4">{{ job.result.summary|markdown }}</div>
-      </article>
-    </section>
-
-    <section
-      x-show="tab === 'actions'"
-      x-cloak
-      x-transition:enter="transition duration-300 ease-out"
-      x-transition:enter-start="opacity-0 translate-y-2"
-      x-transition:enter-end="opacity-100 translate-y-0"
-      data-tab-panel="actions"
-      class="mt-4"
-    >
-      <article class="card p-6 sm:p-8">
-        <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="panel-stage">
+      <section x-show="tab === 'summary'" x-cloak data-tab-panel="summary" class="result-panel">
+        <div class="panel-head">
           <div>
-            <h2 class="section-title">Action items</h2>
-            <p class="mt-1 text-xs text-muted">Tasks, owners, and deadlines to follow up on.</p>
+            <p class="panel-kicker">01 / Summary</p>
+            <h2 class="panel-title">Summary</h2>
           </div>
-          <span class="pill pill-brown">Next steps</span>
+          <span class="panel-tag">At a glance</span>
         </div>
-        <div class="prose-lens mt-4">{{ job.result.action_items|markdown }}</div>
-      </article>
-    </section>
+        <div class="prose-lens">{{ job.result.summary|markdown }}</div>
+      </section>
 
-    <section
-      x-show="tab === 'decisions'"
-      x-cloak
-      x-transition:enter="transition duration-300 ease-out"
-      x-transition:enter-start="opacity-0 translate-y-2"
-      x-transition:enter-end="opacity-100 translate-y-0"
-      data-tab-panel="decisions"
-      class="mt-4"
-    >
-      <article class="card p-6 sm:p-8">
-        <div class="flex flex-wrap items-center justify-between gap-3">
+      <section x-show="tab === 'actions'" x-cloak data-tab-panel="actions" class="result-panel">
+        <div class="panel-head">
           <div>
-            <h2 class="section-title">Key decisions</h2>
-            <p class="mt-1 text-xs text-muted">The choices and conclusions that shaped the conversation.</p>
+            <p class="panel-kicker">02 / Action items</p>
+            <h2 class="panel-title">Action items</h2>
+            <p class="panel-sub">Tasks, owners, and deadlines to follow up on.</p>
           </div>
-          <span class="pill pill-brown">What was decided</span>
+          <span class="panel-tag">Next steps</span>
         </div>
-        <div class="prose-lens mt-4">{{ job.result.key_decisions|markdown }}</div>
-      </article>
-    </section>
+        <div class="prose-lens">{{ job.result.action_items|markdown }}</div>
+      </section>
 
-    <section
-      x-show="tab === 'questions'"
-      x-cloak
-      x-transition:enter="transition duration-300 ease-out"
-      x-transition:enter-start="opacity-0 translate-y-2"
-      x-transition:enter-end="opacity-100 translate-y-0"
-      data-tab-panel="questions"
-      class="mt-4"
-    >
-      <article class="card p-6 sm:p-8">
-        <div class="flex flex-wrap items-center justify-between gap-3">
+      <section x-show="tab === 'decisions'" x-cloak data-tab-panel="decisions" class="result-panel">
+        <div class="panel-head">
           <div>
-            <h2 class="section-title">Open questions</h2>
-            <p class="mt-1 text-xs text-muted">Threads that still need an answer or a follow-up.</p>
+            <p class="panel-kicker">03 / Decisions</p>
+            <h2 class="panel-title">Key decisions</h2>
+            <p class="panel-sub">The choices and conclusions that shaped the conversation.</p>
           </div>
-          <span class="pill pill-brown">Still open</span>
+          <span class="panel-tag">What was decided</span>
         </div>
-        <div class="prose-lens mt-4">{{ job.result.questions|markdown }}</div>
-      </article>
-    </section>
+        <div class="prose-lens">{{ job.result.key_decisions|markdown }}</div>
+      </section>
 
-    <section
-      x-show="tab === 'transcript'"
-      x-cloak
-      x-transition:enter="transition duration-300 ease-out"
-      x-transition:enter-start="opacity-0 translate-y-2"
-      x-transition:enter-end="opacity-100 translate-y-0"
-      data-tab-panel="transcript"
-      class="mt-4"
-    >
-      <article class="card p-6 sm:p-8">
-        <div class="flex flex-wrap items-center justify-between gap-3">
+      <section x-show="tab === 'questions'" x-cloak data-tab-panel="questions" class="result-panel">
+        <div class="panel-head">
           <div>
-            <h2 class="section-title">Full transcript</h2>
-            <p class="mt-1 text-xs text-muted">Raw text from the transcription engine.</p>
+            <p class="panel-kicker">04 / Open questions</p>
+            <h2 class="panel-title">Open questions</h2>
+            <p class="panel-sub">Threads that still need an answer or a follow-up.</p>
           </div>
-          <button type="button" class="btn-ghost" data-copy-target="transcript-text">Copy transcript</button>
+          <span class="panel-tag">Still open</span>
         </div>
-        <pre id="transcript-text" class="mt-5 max-h-[36rem] overflow-auto whitespace-pre-wrap rounded-2xl border border-sand bg-surface-2 p-5 font-sans text-sm leading-7 text-ink">{{ job.result.transcript }}</pre>
-      </article>
-    </section>
+        <div class="prose-lens">{{ job.result.questions|markdown }}</div>
+      </section>
 
-    <section
-      x-show="tab === 'downloads'"
-      x-cloak
-      x-transition:enter="transition duration-300 ease-out"
-      x-transition:enter-start="opacity-0 translate-y-2"
-      x-transition:enter-end="opacity-100 translate-y-0"
-      data-tab-panel="downloads"
-      class="mt-4"
-    >
-      <div class="grid gap-4 sm:grid-cols-2">
-        <a href="/jobs/{{ job.id }}/download/minutes" class="download-card">
-          <span class="download-icon">MD</span>
-          <span class="min-w-0 flex-1">
-            <span class="block text-sm font-semibold text-ink">Meeting minutes</span>
-            <span class="mt-1 block text-xs leading-5 text-muted">Summary, action items, decisions, and open questions in one document.</span>
-          </span>
-          <span class="download-arrow" aria-hidden="true">&darr;</span>
-        </a>
-        <a href="/jobs/{{ job.id }}/download/summary" class="download-card">
-          <span class="download-icon">MD</span>
-          <span class="min-w-0 flex-1">
-            <span class="block text-sm font-semibold text-ink">Summary</span>
-            <span class="mt-1 block text-xs leading-5 text-muted">The executive summary as Markdown.</span>
-          </span>
-          <span class="download-arrow" aria-hidden="true">&darr;</span>
-        </a>
-        <a href="/jobs/{{ job.id }}/download/transcript" class="download-card">
-          <span class="download-icon">TXT</span>
-          <span class="min-w-0 flex-1">
-            <span class="block text-sm font-semibold text-ink">Transcript</span>
-            <span class="mt-1 block text-xs leading-5 text-muted">The full plain-text transcript from the recording.</span>
-          </span>
-          <span class="download-arrow" aria-hidden="true">&darr;</span>
-        </a>
-        <a href="/jobs/{{ job.id }}/download/chat" class="download-card">
-          <span class="download-icon">MD</span>
-          <span class="min-w-0 flex-1">
-            <span class="block text-sm font-semibold text-ink">Chat history</span>
-            <span class="mt-1 block text-xs leading-5 text-muted">Every question and answer from this session.</span>
-          </span>
-          <span class="download-arrow" aria-hidden="true">&darr;</span>
-        </a>
-      </div>
-      <p class="mt-4 text-xs leading-5 text-muted">Minutes combine the summary, action items, key decisions, and open questions.</p>
-    </section>
+      <section x-show="tab === 'transcript'" x-cloak data-tab-panel="transcript" class="result-panel">
+        <div class="panel-head">
+          <div>
+            <p class="panel-kicker">05 / Transcript</p>
+            <h2 class="panel-title">Full transcript</h2>
+            <p class="panel-sub">Raw text from the transcription engine.</p>
+          </div>
+          <button type="button" class="btn btn-ghost btn-small" data-copy-target="transcript-text">Copy transcript</button>
+        </div>
+        <pre id="transcript-text" class="transcript-text">{{ job.result.transcript }}</pre>
+      </section>
+
+      <section x-show="tab === 'downloads'" x-cloak data-tab-panel="downloads" class="result-panel">
+        <div class="panel-head">
+          <div>
+            <p class="panel-kicker">06 / Downloads</p>
+            <h2 class="panel-title">Take the record</h2>
+          </div>
+          <span class="panel-tag">Markdown + text</span>
+        </div>
+
+        <div class="download-grid">
+          <a href="/jobs/{{ job.id }}/download/minutes" class="download-card">
+            <span class="download-icon">MD</span>
+            <span>
+              <span class="download-name">Meeting minutes</span>
+              <span class="download-desc">Summary, action items, decisions, and open questions in one document.</span>
+            </span>
+            <span class="download-arrow" aria-hidden="true">&darr;</span>
+          </a>
+          <a href="/jobs/{{ job.id }}/download/summary" class="download-card">
+            <span class="download-icon">MD</span>
+            <span>
+              <span class="download-name">Summary</span>
+              <span class="download-desc">The executive summary as Markdown.</span>
+            </span>
+            <span class="download-arrow" aria-hidden="true">&darr;</span>
+          </a>
+          <a href="/jobs/{{ job.id }}/download/transcript" class="download-card">
+            <span class="download-icon">TXT</span>
+            <span>
+              <span class="download-name">Transcript</span>
+              <span class="download-desc">The full plain-text transcript from the recording.</span>
+            </span>
+            <span class="download-arrow" aria-hidden="true">&darr;</span>
+          </a>
+          <a href="/jobs/{{ job.id }}/download/chat" class="download-card">
+            <span class="download-icon">MD</span>
+            <span>
+              <span class="download-name">Chat history</span>
+              <span class="download-desc">Every question and answer from this session.</span>
+            </span>
+            <span class="download-arrow" aria-hidden="true">&darr;</span>
+          </a>
+        </div>
+        <p class="download-note">Minutes combine the summary, action items, key decisions, and open questions.</p>
+      </section>
+    </div>
   </div>
 
-  <section id="chat" class="mt-8 scroll-mt-24" data-reveal>
-    <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
+  <section id="chat" class="chat-section">
+    <div class="chat-section-head">
       <div>
-        <h2 class="text-xl font-semibold tracking-tight text-ink">Chat with this recording</h2>
-        <p class="mt-1 text-sm text-muted">Ask follow-up questions about anything that was said.</p>
+        <p class="kicker">Ask</p>
+        <h2 class="chat-section-title">Chat with this recording</h2>
+        <p class="chat-section-sub">Ask follow-up questions about anything that was said.</p>
       </div>
-      <a href="#job-top" class="text-xs font-semibold text-brown transition hover:text-accent">Back to tabs</a>
+      <a href="#job-top" class="btn btn-ghost btn-small">Back to tabs</a>
     </div>
     {% include "partials/chat.html" %}
   </section>
@@ -287,5 +242,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/job.js" defer></script>
+<script src="/static/js/job.js?v=3" defer></script>
 {% endblock %}
